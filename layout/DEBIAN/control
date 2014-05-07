@@ -1,0 +1,9 @@
+Package: com.bensge.wipi
+Name: WiPi
+Depends: mobilesubstrate
+Version: 1.3
+Architecture: iphoneos-arm
+Description: Show the WiFi Picker with an Activator gesture, or by long-holding on the FlipSwitch WiFi toggle! Automatically enables Wi-Fi if not enabled yet.
+Maintainer: bensge
+Author: bensge
+Section: Tweaks
