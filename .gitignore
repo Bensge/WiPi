@@ -1,0 +1,12 @@
+
+*.deb
+
+.theos/fakeroot
+
+.theos/last_package
+
+.theos/packages/*
+
+obj/*
+
+_/*
