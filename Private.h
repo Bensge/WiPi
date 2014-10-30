@@ -15,22 +15,22 @@
 @end
 
 @interface WFWiFiManager : NSObject
-+(void)awakeFromBundle;
-+(WFWiFiManager *)sharedInstance;
--(BOOL)joining;
--(void)scan;
--(void)_scanFailed;
++ (void)awakeFromBundle;
++ (WFWiFiManager *)sharedInstance;
+- (BOOL)joining;
+- (void)scan;
+- (void)_scanFailed;
 @end
 
 @interface UIWindow ()
-+(UIWindow *)keyWindow;
++ (UIWindow *)keyWindow;
 @end
 
 
 @interface SBWiFiManager : NSObject
-+(SBWiFiManager *)sharedInstance;
--(BOOL)wiFiEnabled;
--(void)setWiFiEnabled:(BOOL)e;
++ (SBWiFiManager *)sharedInstance;
+- (BOOL)wiFiEnabled;
+- (void)setWiFiEnabled:(BOOL)e;
 @end
 
 //FlipSwitch WiFi toggle
@@ -38,7 +38,7 @@
 @end
 
 @interface FSSwitchPanel : NSObject
-+(FSSwitchPanel *)sharedPanel;
++ (FSSwitchPanel *)sharedPanel;
 - (BOOL)hasAlternateActionForSwitchIdentifier:(NSString *)switchIdentifier;
 // Queries whether a switch supports an alternate action. This is often triggered by a hold gesture
 - (void)applyAlternateActionForSwitchIdentifier:(NSString *)switchIdentifier;
@@ -55,5 +55,5 @@
 @end
 
 @interface SBHUDView : NSObject
--(id)initWithHUDViewLevel:(int)lvl;
+- (id)initWithHUDViewLevel:(int)lvl;
 @end

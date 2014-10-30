@@ -1,29 +1,99 @@
 #import <Foundation/Foundation.h>
 #import <UIKit/UIKit.h>
 #import <libactivator/libactivator.h>
+#import <objc/runtime.h>
 
 #import "Private.h"
 
+static BOOL shouldShowPicker = NO;
 
-//////////////////////////////
-//////////////////////////////
-//////////////////////////////
-//////                ////////
-//////      CODE      ////////
-//////                ////////
-//////////////////////////////
-//////////////////////////////
-//////////////////////////////
+/*
+*  ----------
+* | Listener |
+*  ----------
+*/
 
 @interface WiPiListener : NSObject <LAListener>
+- (void)hideHUD;
 @property (nonatomic, retain) UIView *hud;
 @property (nonatomic, retain) UIWindow *alertWindow;
 @property (readonly) UIWindow *oldWindow;
--(void)hideHUD;
 @end
 
+@implementation WiPiListener
 
-static BOOL shouldShowPicker = NO;
+- (void)activator:(LAActivator *)activator receiveEvent:(LAEvent *)event
+{
+	if (shouldShowPicker)
+	{
+		//WiPi already active
+		return;
+	}
+
+	if (event)
+	{
+		[event setHandled:YES];
+	}
+
+	if (_hud)
+	{
+		[(UIProgressHUD *)_hud hide];
+	}
+
+	SBWiFiManager *wifi = (SBWiFiManager *)[objc_getClass("SBWiFiManager") sharedInstance];
+  	if (![wifi wiFiEnabled])
+  	{
+  		[wifi setWiFiEnabled:YES];
+  	}
+
+	shouldShowPicker = YES;
+
+	[(WFWiFiManager *)[objc_getClass("WFWiFiManager") sharedInstance] scan];
+
+	_alertWindow = [[[UIWindow alloc] initWithFrame:UIScreen.mainScreen.bounds] retain];
+	_alertWindow.backgroundColor = [UIColor clearColor];
+	_alertWindow.userInteractionEnabled = NO;
+	_alertWindow.windowLevel = UIWindowLevelAlert;
+	_alertWindow.hidden = NO;
+
+	UIProgressHUD *hud = [[objc_getClass("UIProgressHUD") alloc] initWithWindow:_alertWindow];
+	[hud setText:@"Scanning..."];
+	[hud showInView:_alertWindow];
+	_hud = hud;
+}
+
+- (void)hideHUD
+{
+	dispatch_async(dispatch_get_main_queue(),^{
+		WiPiListener *listener = (WiPiListener *)[[LAActivator sharedInstance] listenerForName:@"com.bensge.wipi"];
+		UIProgressHUD *hud = (UIProgressHUD *)[listener hud];
+		[hud hide];
+		[hud release];
+		listener.hud = nil;
+
+		UIWindow *alertWindow = [listener alertWindow];
+		[alertWindow setHidden:YES];
+		[alertWindow release];
+		listener.alertWindow = nil;
+	});
+}
+
++ (void)load
+{
+	@autoreleasepool 
+	{
+		// Register listener
+		[[LAActivator sharedInstance] registerListener:[self new] forName:@"com.bensge.wipi"];
+	}
+}
+
+@end
+
+/*
+*  -------
+* | HOOKS |
+*  -------
+*/
 
 
 /*
@@ -33,10 +103,11 @@ static BOOL shouldShowPicker = NO;
 %group Wifi67
 %hook WFWiFiManager
 
--(BOOL)_shouldShowPicker
+- (BOOL)_shouldShowPicker
 {
 	BOOL ret = %orig;
-	if (shouldShowPicker){
+	if (shouldShowPicker)
+	{
 		shouldShowPicker = NO;
 		[(WiPiListener *)[[LAActivator sharedInstance] listenerForName:@"com.bensge.wipi"] hideHUD];
 		return YES;
@@ -54,7 +125,7 @@ static BOOL shouldShowPicker = NO;
 %group Wifi8
 %hook WFWiFiManager
 
--(BOOL)_shouldShowPicker:(BOOL)yoloRiteYa
+- (BOOL)_shouldShowPicker:(BOOL)yoloRiteYa
 {
 	BOOL ret = %orig;
 	if (shouldShowPicker)
@@ -68,21 +139,12 @@ static BOOL shouldShowPicker = NO;
 %end
 %hook WFWiFiAlertItem
 
-- (void)dimiss:(int)arg1
+- (void)didDeactivateForReason:(int)reason
 {
+	%log;
 	shouldShowPicker = NO;
 	%orig;
 }
-/*- (void)_finishBTScanning
-{
-	%log;
-	NSMutableArray *_networks = [self valueForKey:@"_networks"];
-	if (_networks.count > 0)
-	{
-		NSLog(@"CALLING ORIGGG");
-		%orig;
-	}
-}*/
 
 %end
 %end
@@ -93,113 +155,57 @@ static BOOL shouldShowPicker = NO;
 
 %group Wifi
 %hook WFWiFiManager
-/*
--(void)_wifiScanComplete:(CFArrayRef)complete{
-	NSLog(@"WIFISUCCESS");
-	WifiResult *res = [[WifiResult alloc] init];
-	res.results = [(NSArray *)complete copy];
-	NSLog(@"RESULT: %@",res);
-	%orig;
-}*/
 
 - (void)scan
 {
 	[[objc_getClass("WFWiFiManager") sharedInstance] setValue:[NSNumber numberWithInt:-130] forKey:@"_rssiThreshold"];
 	%orig;
 }
+
 %end
+%end
+
 /*
-static BOOL hookBluetoothSearching = NO;
-
-%hook WFWiFiAlertItem
-- (id)init
-{
-	hookBluetoothSearching = YES;
-	id ret = %orig;
-	hookBluetoothSearching = NO;
-	return ret;
-}
-%end
-
-%hook BluetoothManager
-
-- (BOOL)isServiceSupported:(int)service
-{
-	%log;
-	if (hookBluetoothSearching && service == 0x1000)
-		return NO;
-	return %orig;
-}
-%end
+* FlipSwitch hooks
 */
-/*
-%hook WFWiFiAlertItem
-
-- (void)startBTScan:(BOOL)scan
-{
-	[self _finishBTScanning];
-}
-
-%end
-*/
-/*
-%subclass WiPiLoadingHUDView : SBHUDView
--(id)init
-{
-	if ((self = (WiPiLoadingHUDView *)[(SBHUDView *)self initWithHUDViewLevel:0]))
-	{
-		[self setValue:@NO forKey:@"_showsProgress"];
-		[self performSelector:@selector(setTitle:) withObject:@"Scanning..."];
-
-		UIActivityIndicatorView *activityIndicator = [[UIActivityIndicatorView alloc] initWithActivityIndicatorStyle:UIActivityIndicatorViewStyleWhiteLarge];
-		activityIndicator.center = [(UIView *)self center];
-		[self addSubview:activityIndicator];
-		[activityIndicator startAnimating];
-		[activityIndicator release];
-	}
-	return self;
-}
-
-- (BOOL)displaysLabel
-{
-	return YES;
-}
-%end
-*/
-
-%end
-/////
-
 
 %group FlipSwitch
 %hook FSSwitchMainPanel
--(BOOL)hasAlternateActionForSwitchIdentifier:(NSString *)identifier
+
+- (BOOL)hasAlternateActionForSwitchIdentifier:(NSString *)identifier
 {
-	if ([identifier isEqualToString:@"com.a3tweaks.switch.wifi"]){
+	if ([identifier isEqualToString:@"com.a3tweaks.switch.wifi"])
+	{
 		return YES;
 	}
 	return %orig;
 }
--(void)applyAlternateActionForSwitchIdentifier:(NSString *)identifier
+
+- (void)applyAlternateActionForSwitchIdentifier:(NSString *)identifier
 {
 	if ([identifier isEqualToString:@"com.a3tweaks.switch.wifi"])
 	{
 		[[LAActivator sharedInstance] sendEvent:nil toListenerWithName:@"com.bensge.wipi"];
 	}
-	else {
+	else
+	{
 		%orig;
 	}
 }
+
 %end
 %end
+
+/*
+* ControlCenter toggle hooks
+*/
 
 %group ControlCenter
-
 %hook SBControlCenterButton
 
 static char wipiHoldGestureRecognizer;
 
--(void)setIdentifier:(NSString *)identifier
+- (void)setIdentifier:(NSString *)identifier
 {
 	if ([identifier isEqualToString:@"wifi"] && objc_getAssociatedObject(self,&wipiHoldGestureRecognizer) == nil)
 	{
@@ -220,9 +226,7 @@ static char wipiHoldGestureRecognizer;
 	%orig;
 }
 
-
-
--(void)dealloc
+- (void)dealloc
 {
 	if (objc_getAssociatedObject(self,&wipiHoldGestureRecognizer) != nil)
 	{
@@ -235,9 +239,8 @@ static char wipiHoldGestureRecognizer;
 	%orig;
 }
 
-
 %new
--(void)_wipi_longHoldAction:(UILongPressGestureRecognizer *)sender
+- (void)_wipi_longHoldAction:(UILongPressGestureRecognizer *)sender
 {
 	if (sender.state == UIGestureRecognizerStateBegan)
 	{
@@ -248,9 +251,10 @@ static char wipiHoldGestureRecognizer;
 %end
 %end
 
+/*
+* Hook setup code
+*/
 
-
-/////
 %group General
 %hook SBPluginManager
 
@@ -278,8 +282,6 @@ static char wipiHoldGestureRecognizer;
 %end
 %end
 
-
-
 %ctor
 {
 	%init(General);
@@ -288,63 +290,3 @@ static char wipiHoldGestureRecognizer;
 		%init(ControlCenter);
 	}
 }
-
-
-@implementation WiPiListener
-@synthesize hud = _hud, alertWindow = _alertWindow, oldWindow = _oldWindow;
-
-- (void)activator:(LAActivator *)activator receiveEvent:(LAEvent *)event
-{
-	if (event)
-		[event setHandled:YES];
-
-	if (_hud)
-		[(UIProgressHUD *)_hud hide];
-
-
-	SBWiFiManager *wifi = (SBWiFiManager *)[objc_getClass("SBWiFiManager") sharedInstance];
-  	if (![wifi wiFiEnabled])
-  		[wifi setWiFiEnabled:YES];
-
-	shouldShowPicker = YES;
-
-	[(WFWiFiManager *)[objc_getClass("WFWiFiManager") sharedInstance] scan];
-
-	_alertWindow = [[[UIWindow alloc] initWithFrame:UIScreen.mainScreen.bounds] retain];
-	_alertWindow.backgroundColor = [UIColor clearColor];
-	_alertWindow.userInteractionEnabled = NO;
-	_alertWindow.windowLevel = UIWindowLevelAlert;
-	_alertWindow.hidden = NO;
-
-	UIProgressHUD *hud = (UIProgressHUD *)[[objc_getClass("UIProgressHUD") alloc] initWithWindow:_alertWindow];
-	[hud setText:@"Scanning..."];
-	[hud showInView:_alertWindow];
-	_hud = (UIView *)hud;
-}
-
--(void)hideHUD
-{
-	dispatch_async(dispatch_get_main_queue(),^{
-		WiPiListener *listener = (WiPiListener *)[[LAActivator sharedInstance] listenerForName:@"com.bensge.wipi"];
-		UIProgressHUD *hud = (UIProgressHUD *)[listener hud];
-		[hud hide];
-		[hud release];
-		listener.hud = nil;
-
-		UIWindow *alertWindow = [listener alertWindow];
-		[alertWindow setHidden:YES];
-		[alertWindow release];
-		listener.alertWindow = nil;
-	});
-}
-
-+ (void)load
-{
-	@autoreleasepool 
-	{
-		// Register our listener
-		[[LAActivator sharedInstance] registerListener:[self new] forName:@"com.bensge.wipi"];
-	}
-}
-
-@end

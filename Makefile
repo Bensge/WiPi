@@ -4,6 +4,7 @@ ARCHS = armv7 arm64
 include theos/makefiles/common.mk
 
 TARGET=7.0:clang
+THEOS_BUILD_DIR=./DEBs
 
 TWEAK_NAME = WiPi
 WiPi_FILES = Tweak.xm
