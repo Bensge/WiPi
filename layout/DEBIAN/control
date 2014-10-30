@@ -3,7 +3,7 @@ Name: WiPi
 Depends: mobilesubstrate
 Version: 1.4
 Architecture: iphoneos-arm
-Description: Activate system WiFi Picker with an Activator gesture, or by long-pressing the Controler Center or FlipSwitch WiFi toggle. Automatically enables Wi-Fi if not enabled.
+Description: Activate system WiFi Picker with an Activator gesture, or by long-pressing the Control Center or FlipSwitch WiFi toggle. Automatically enables Wi-Fi if not enabled.
 Maintainer: bensge
 Author: bensge
 Section: Tweaks

@@ -15,7 +15,7 @@ static BOOL shouldShowPicker = NO;
 
 @interface WiPiListener : NSObject <LAListener>
 - (void)hideHUD;
-@property (nonatomic, retain) UIView *hud;
+@property (nonatomic, retain) UIProgressHUD *hud;
 @property (nonatomic, retain) UIWindow *alertWindow;
 @property (readonly) UIWindow *oldWindow;
 @end
@@ -59,14 +59,14 @@ static BOOL shouldShowPicker = NO;
 	UIProgressHUD *hud = [[objc_getClass("UIProgressHUD") alloc] initWithWindow:_alertWindow];
 	[hud setText:@"Scanning..."];
 	[hud showInView:_alertWindow];
-	_hud = hud;
+	self.hud = hud;
 }
 
 - (void)hideHUD
 {
 	dispatch_async(dispatch_get_main_queue(),^{
 		WiPiListener *listener = (WiPiListener *)[[LAActivator sharedInstance] listenerForName:@"com.bensge.wipi"];
-		UIProgressHUD *hud = (UIProgressHUD *)[listener hud];
+		UIProgressHUD *hud = [listener hud];
 		[hud hide];
 		[hud release];
 		listener.hud = nil;
