@@ -1,10 +1,12 @@
+export TARGET = iphone:clang:latest:7.0
+INSTALL_TARGET_PROCESSES += SpringBoard
+
 #DEBUG=1
 ARCHS = armv7 arm64
 
 include theos/makefiles/common.mk
 
-TARGET=7.0:clang
-THEOS_BUILD_DIR=./DEBs
+#THEOS_BUILD_DIR=./DEBs
 
 TWEAK_NAME = WiPi
 WiPi_FILES = Tweak.xm
@@ -13,5 +15,3 @@ WiPi_LDFLAGS = -lactivator
 
 include $(THEOS_MAKE_PATH)/tweak.mk
 
-after-install::
-	install.exec "killall -9 SpringBoard"

@@ -198,10 +198,12 @@ static BOOL shouldShowPicker = NO;
 
 /*
 * ControlCenter toggle hooks
+* CCUIControlCenterPushButton for >= iOS 10
+* SBControlCenterButton       for <= iOS  9
 */
 
 %group ControlCenter
-%hook SBControlCenterButton
+%hook BUTTONCLASS
 
 static char wipiHoldGestureRecognizer;
 
@@ -255,6 +257,16 @@ static char wipiHoldGestureRecognizer;
 * Hook setup code
 */
 
+void initiOS6And7()
+{
+	%init(Wifi67);
+}
+
+void initiOS8AndLater()
+{
+	%init(Wifi8);
+}
+
 %group General
 %hook SBPluginManager
 
@@ -266,11 +278,11 @@ static char wipiHoldGestureRecognizer;
 	//Specific hooks
 	if ([objc_getClass("WFWiFiManager") instancesRespondToSelector:@selector(_shouldShowPicker)])
 	{
-		%init(Wifi67);
+		initiOS6And7();
 	}
 	else if ([objc_getClass("WFWiFiManager") instancesRespondToSelector:@selector(_shouldShowPicker:)])
 	{
-		%init(Wifi8);
+		initiOS8AndLater();
 	}
 
 	//FlipSwitch hooks
@@ -280,13 +292,24 @@ static char wipiHoldGestureRecognizer;
 	}
 }
 %end
+%hook NSBundle
++ (instancetype)bundleWithPath:(NSString *)path {
+	NSBundle *ret = %orig;
+	if ([path isEqualToString:@"/System/Library/SpringBoardPlugins/WiFiPicker.servicebundle"]) {
+		[ret load];
+		initiOS8AndLater();
+	}
+	return ret;
+}
+
+%end
 %end
 
 %ctor
 {
 	%init(General);
-	if (objc_getClass("SBControlCenterButton"))
+	if (objc_getClass("SBControlCenterButton") || objc_getClass("CCUIControlCenterPushButton"))
 	{
-		%init(ControlCenter);
+		%init(ControlCenter,BUTTONCLASS=(objc_getClass("SBControlCenterButton") ?: objc_getClass("CCUIControlCenterPushButton")));
 	}
 }
