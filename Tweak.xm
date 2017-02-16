@@ -267,6 +267,11 @@ void initiOS8AndLater()
 	%init(Wifi8);
 }
 
+void initFlipSwitch()
+{
+	%init(FlipSwitch);
+}
+
 %group General
 %hook SBPluginManager
 
@@ -288,7 +293,7 @@ void initiOS8AndLater()
 	//FlipSwitch hooks
 	if (objc_getClass("FSSwitchPanel"))
 	{
-		%init(FlipSwitch);
+		initFlipSwitch();
 	}
 }
 %end
@@ -298,6 +303,7 @@ void initiOS8AndLater()
 	if ([path isEqualToString:@"/System/Library/SpringBoardPlugins/WiFiPicker.servicebundle"]) {
 		[ret load];
 		initiOS8AndLater();
+		initFlipSwitch();
 	}
 	return ret;
 }
