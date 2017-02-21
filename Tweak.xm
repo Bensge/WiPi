@@ -406,7 +406,14 @@ void initFlipSwitch()
 
 %ctor
 {
-	%init(General);
+	if (kCFCoreFoundationVersionNumber >= 1348.00)
+	{
+		%init(General10AndLater);
+	}
+	else {
+		%init(General9AndEarlier);
+	}
+
 	if (objc_getClass("SBControlCenterButton") || objc_getClass("CCUIControlCenterPushButton"))
 	{
 		%init(ControlCenter,BUTTONCLASS=(objc_getClass("SBControlCenterButton") ?: objc_getClass("CCUIControlCenterPushButton")));
