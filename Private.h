@@ -16,7 +16,7 @@
 
 @interface WFWiFiManager : NSObject
 + (void)awakeFromBundle;
-+ (WFWiFiManager *)sharedInstance;
++ (instancetype)sharedInstance;
 - (BOOL)joining;
 - (void)scan;
 - (void)_scanFailed;
@@ -57,3 +57,6 @@
 @interface SBHUDView : NSObject
 - (id)initWithHUDViewLevel:(int)lvl;
 @end
+
+extern "C" NSData *WiFiNetworkGetSSIDData(void *);
+extern "C" void *WiFiDeviceClientCopyCurrentNetwork(void *);

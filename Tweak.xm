@@ -18,6 +18,10 @@ static BOOL shouldShowPicker = NO;
 @property (nonatomic, retain) UIProgressHUD *hud;
 @property (nonatomic, retain) UIWindow *alertWindow;
 @property (readonly) UIWindow *oldWindow;
+@end 
+
+@interface WFWiFiManager (Additions)
+- (NSString *)currentNetworkBSSID;
 @end
 
 @implementation WiPiListener
@@ -146,6 +150,23 @@ static BOOL shouldShowPicker = NO;
 	%orig;
 }
 
+// Fix the appearance of the wifi picker in iOS 8 and up
+// Remove white table background, add top border to tableview
+- (void)configure:(BOOL)arg1 requirePasscodeForActions:(BOOL)arg2
+{
+	%orig;
+	UITableView *table = [self valueForKey:@"_table"];
+	table.backgroundColor = UIColor.clearColor;
+	// This is not very elegant. The tableView is not in the view hierarchy at this point, but soon will be.
+	// We can't just add the border view to the tableView, then it moves while scolling :/
+	dispatch_async(dispatch_get_main_queue(), ^{
+		UIView *topBorder = [[UIView alloc] initWithFrame:CGRectMake(0,0,table.frame.size.width,0.5)];
+		topBorder.backgroundColor = [UIColor colorWithWhite:0.5 alpha:0.5];
+		topBorder.autoresizingMask = UIViewAutoresizingFlexibleWidth;
+		[table.superview addSubview:topBorder];
+	});
+}
+
 %end
 %end
 
@@ -158,8 +179,58 @@ static BOOL shouldShowPicker = NO;
 
 - (void)scan
 {
-	[[objc_getClass("WFWiFiManager") sharedInstance] setValue:[NSNumber numberWithInt:-130] forKey:@"_rssiThreshold"];
+	//Only on 7 and later
+	if (kCFCoreFoundationVersionNumber >= 847.20)
+	{
+		[[objc_getClass("WFWiFiManager") sharedInstance] setValue:[NSNumber numberWithInt:-130] forKey:@"_rssiThreshold"];
+	}
 	%orig;
+}
+
+NSData *(*_dynamic_WiFiNetworkGetSSIDData)(void *) = (NSData *(*)(void *))(dlsym(RTLD_DEFAULT, "WiFiNetworkGetSSIDData"));
+void *(*_dynamic_WiFiDeviceClientCopyCurrentNetwork)(void *) = (void *(*)(void *))(dlsym(RTLD_DEFAULT, "WiFiDeviceClientCopyCurrentNetwork"));
+CFDictionaryRef (*_dynamic_WiFiNetworkCopyRecord)(void *) = (CFDictionaryRef (*)(void *))(dlsym(RTLD_DEFAULT, "WiFiNetworkCopyRecord"));
+CFStringRef (*_dynamic_WiFiNetworkGetProperty)(void *, CFStringRef) = (CFStringRef (*) (void *, CFStringRef))(dlsym(RTLD_DEFAULT, "WiFiNetworkGetProperty"));
+
+%new
+- (NSString *)currentNetworkBSSID
+{
+	//Doesn't work with key value coding, c struct pointers not supported
+	//void *device = [self valueForKey:@"_device"];
+	void *device = MSHookIvar<void *>(self, "_device");
+	if (device != NULL)
+	{
+		void *currentNetwork = _dynamic_WiFiDeviceClientCopyCurrentNetwork(device);
+		if (currentNetwork != NULL)
+		{
+			//NSDictionary *properties = (NSDictionary *)_dynamic_WiFiNetworkCopyRecord(currentNetwork);
+			NSString *data = (NSString *)_dynamic_WiFiNetworkGetProperty(currentNetwork, CFSTR("BSSID"));
+			return data;
+		}
+	}
+	return NULL;
+}
+
+%end
+
+%hook WFWiFiAlertItem
+
+- (UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)idx
+{
+	UITableViewCell *cell = %orig();
+	if ([cell isKindOfClass:objc_getClass("WFWiFiCell")])
+	{
+		NSDictionary *networkData = [cell valueForKey:@"_dict"];
+
+		NSString *currentNetworkBSSID = (NSString *)[[objc_getClass("WFWiFiManager") sharedInstance] currentNetworkBSSID];
+
+		if ([networkData[@"BSSID"] isEqualToString:currentNetworkBSSID])
+		{
+			cell.textLabel.text = [@"✔︎ " stringByAppendingString:cell.textLabel.text];
+		}
+	}
+	
+	return cell;
 }
 
 %end
@@ -201,6 +272,8 @@ static BOOL shouldShowPicker = NO;
 * CCUIControlCenterPushButton for >= iOS 10
 * SBControlCenterButton       for <= iOS  9
 */
+
+
 
 %group ControlCenter
 %hook BUTTONCLASS
@@ -257,29 +330,46 @@ static char wipiHoldGestureRecognizer;
 * Hook setup code
 */
 
+void _init()
+{
+	static dispatch_once_t once;
+    dispatch_once(&once, ^{
+		%init(Wifi);
+	});
+}
+
 void initiOS6And7()
 {
-	%init(Wifi67);
+	_init();
+	static dispatch_once_t once;
+    dispatch_once(&once, ^{
+		%init(Wifi67);
+	});
 }
 
 void initiOS8AndLater()
 {
-	%init(Wifi8);
+	_init();
+	static dispatch_once_t once;
+    dispatch_once(&once, ^{
+		%init(Wifi8);
+	});
 }
 
 void initFlipSwitch()
 {
-	%init(FlipSwitch);
+	static dispatch_once_t once;
+    dispatch_once(&once, ^{
+		%init(FlipSwitch);
+	});
 }
 
-%group General
+%group General9AndEarlier
 %hook SBPluginManager
 
 - (void)loadAllLaunchPlugins
 {
 	%orig;
-
-	%init(Wifi);
 	//Specific hooks
 	if ([objc_getClass("WFWiFiManager") instancesRespondToSelector:@selector(_shouldShowPicker)])
 	{
@@ -297,6 +387,9 @@ void initFlipSwitch()
 	}
 }
 %end
+%end
+
+%group General10AndLater
 %hook NSBundle
 + (instancetype)bundleWithPath:(NSString *)path {
 	NSBundle *ret = %orig;
