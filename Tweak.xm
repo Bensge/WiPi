@@ -2,10 +2,19 @@
 #import <UIKit/UIKit.h>
 #import <libactivator/libactivator.h>
 #import <objc/runtime.h>
-
 #import "Private.h"
 
+#define PREF_PATH @"/var/mobile/Library/Preferences/com.bensge.wipi.plist"
+
 static BOOL shouldShowPicker = NO;
+static BOOL longHoldEnabled;
+
+static void LoadSettings()
+{
+    NSDictionary *dict = [NSDictionary dictionaryWithContentsOfFile:PREF_PATH];
+    
+    longHoldEnabled = [dict objectForKey:@"enabled"] ? [[dict objectForKey:@"enabled"] boolValue] : YES;
+}
 
 /*
 *  ----------
@@ -30,9 +39,12 @@ static BOOL shouldShowPicker = NO;
 {
 	if (shouldShowPicker)
 	{
-		//WiPi already active
+		//WiPi already active, It does not work well on lock screen.
 		return;
 	}
+    
+    //It does not work well on lock screen on iOS10.
+    if (kCFCoreFoundationVersionNumber >= 1348.00 && [[objc_getClass("SBUserAgent") sharedUserAgent] deviceIsLocked]) return;
 
 	if (event)
 	{
@@ -91,6 +103,38 @@ static BOOL shouldShowPicker = NO;
 	}
 }
 
+- (NSString *)activator:(LAActivator *)activator requiresLocalizedTitleForListenerName:(NSString *)listenerName
+{
+    return @"WiPi";
+}
+
+- (NSString *)activator:(LAActivator *)activator requiresLocalizedDescriptionForListenerName:(NSString *)listenerName
+{
+    return @"Show WiFi Picker";
+}
+
+- (NSData *)activator:(LAActivator *)activator requiresSmallIconDataForListenerName:(NSString *)listenerName scale:(CGFloat *)scale
+{
+    if (*scale == 1.0) {
+        return [NSData dataWithContentsOfFile:@"/Library/PreferenceBundles/WiPiSettings.bundle/WiPi.png"];
+    } else if (*scale == 2.0){
+        return [NSData dataWithContentsOfFile:@"/Library/PreferenceBundles/WiPiSettings.bundle/WiPi@2x.png"];
+    } else {
+        return [NSData dataWithContentsOfFile:@"/Library/PreferenceBundles/WiPiSettings.bundle/WiPi@3x.png"];
+    }
+}
+
+- (NSArray *)activator:(LAActivator *)activator requiresCompatibleEventModesForListenerWithName:(NSString *)listenerName
+{
+    //It does not work well on lock screen on iOS10.
+    if (kCFCoreFoundationVersionNumber >= 1348.00) {
+        return @[@"springboard", @"application"];
+    } else {
+        return @[@"springboard", @"lockscreen", @"application"];
+    }
+    
+}
+
 @end
 
 /*
@@ -145,7 +189,6 @@ static BOOL shouldShowPicker = NO;
 
 - (void)didDeactivateForReason:(int)reason
 {
-	%log;
 	shouldShowPicker = NO;
 	%orig;
 }
@@ -226,11 +269,11 @@ CFStringRef (*_dynamic_WiFiNetworkGetProperty)(void *, CFStringRef) = (CFStringR
 
 		if ([networkData[@"BSSID"] isEqualToString:currentNetworkBSSID])
 		{
-			cell.textLabel.text = [@"✔︎ " stringByAppendingString:cell.textLabel.text];
+			cell.textLabel.text = [@"✓ " stringByAppendingString:cell.textLabel.text];
 		}
 	}
-	
-	return cell;
+    
+    return cell;
 }
 
 %end
@@ -245,7 +288,9 @@ CFStringRef (*_dynamic_WiFiNetworkGetProperty)(void *, CFStringRef) = (CFStringR
 
 - (BOOL)hasAlternateActionForSwitchIdentifier:(NSString *)identifier
 {
-	if ([identifier isEqualToString:@"com.a3tweaks.switch.wifi"])
+    LoadSettings();
+    
+	if ([identifier isEqualToString:@"com.a3tweaks.switch.wifi"] && longHoldEnabled)
 	{
 		return YES;
 	}
@@ -254,7 +299,9 @@ CFStringRef (*_dynamic_WiFiNetworkGetProperty)(void *, CFStringRef) = (CFStringR
 
 - (void)applyAlternateActionForSwitchIdentifier:(NSString *)identifier
 {
-	if ([identifier isEqualToString:@"com.a3tweaks.switch.wifi"])
+    LoadSettings();
+    
+	if ([identifier isEqualToString:@"com.a3tweaks.switch.wifi"] && longHoldEnabled)
 	{
 		[[LAActivator sharedInstance] sendEvent:nil toListenerWithName:@"com.bensge.wipi"];
 	}
@@ -317,7 +364,9 @@ static char wipiHoldGestureRecognizer;
 %new
 - (void)_wipi_longHoldAction:(UILongPressGestureRecognizer *)sender
 {
-	if (sender.state == UIGestureRecognizerStateBegan)
+    LoadSettings();
+    
+	if (sender.state == UIGestureRecognizerStateBegan && longHoldEnabled)
 	{
 		[[LAActivator sharedInstance] sendEvent:nil toListenerWithName:@"com.bensge.wipi"];
 	}
@@ -406,16 +455,27 @@ void initFlipSwitch()
 
 %ctor
 {
-	if (kCFCoreFoundationVersionNumber >= 1348.00)
-	{
-		%init(General10AndLater);
-	}
-	else {
-		%init(General9AndEarlier);
-	}
-
-	if (objc_getClass("SBControlCenterButton") || objc_getClass("CCUIControlCenterPushButton"))
-	{
-		%init(ControlCenter,BUTTONCLASS=(objc_getClass("SBControlCenterButton") ?: objc_getClass("CCUIControlCenterPushButton")));
-	}
+    @autoreleasepool {
+        CFNotificationCenterAddObserver(CFNotificationCenterGetDarwinNotifyCenter(),
+                                        NULL,
+                                        (CFNotificationCallback)LoadSettings,
+                                        CFSTR("com.bensge.wipi.preferencechanged"),
+                                        NULL,
+                                        CFNotificationSuspensionBehaviorDeliverImmediately);
+        
+        if (kCFCoreFoundationVersionNumber >= 1348.00)
+        {
+            %init(General10AndLater);
+        }
+        else {
+            %init(General9AndEarlier);
+        }
+        
+        if (objc_getClass("SBControlCenterButton") || objc_getClass("CCUIControlCenterPushButton"))
+        {
+            %init(ControlCenter,BUTTONCLASS=(objc_getClass("SBControlCenterButton") ?: objc_getClass("CCUIControlCenterPushButton")));
+        }
+        
+        LoadSettings();
+    }
 }

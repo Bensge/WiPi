@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>items</key>
+	<array>
+		<dict>
+			<key>cell</key>
+			<string>PSGroupCell</string>
+			<key>label</key>
+			<string>Settings</string>
+			<key>footerText</key>
+			<string>If it is enabled, WiPi will be executed by pressing and holding Wi-Fi on the Control Center or Flipswitch.</string>
+		</dict>
+		<dict>
+			<key>cell</key>
+			<string>PSSwitchCell</string>
+			<key>default</key>
+			<true/>
+			<key>defaults</key>
+			<string>com.bensge.wipi</string>
+			<key>key</key>
+			<string>enabled</string>
+			<key>label</key>
+			<string>Long Hold</string>
+			<key>PostNotification</key>
+			<string>com.bensge.wipi.preferencechanged</string>
+		</dict>
+		<dict>
+			<key>cell</key>
+			<string>PSGroupCell</string>
+			<key>label</key>
+			<string>Activator</string>
+			<key>footerText</key>
+			<string>Please select the method to be executed by Activator.</string>
+		</dict>
+		<dict>
+			<key>cell</key>
+			<string>PSLinkCell</string>
+			<key>label</key>
+			<string>Activation Methods</string>
+			<key>isController</key>
+			<true/>
+			<key>bundle</key>
+			<string>LibActivator</string>
+			<key>activatorListener</key>
+			<string>com.bensge.wipi</string>
+		</dict>
+		<dict>
+			<key>cell</key>
+			<string>PSGroupCell</string>
+			<key>footerText</key>
+			<string>© 2013 - 2017 Bensge @ Apextweaks</string>
+		</dict>
+	</array>
+	<key>title</key>
+	<string>WiPi</string>
+</dict>
+</plist>
