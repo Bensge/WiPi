@@ -5,6 +5,8 @@
 #import "Private.h"
 
 #define PREF_PATH @"/var/mobile/Library/Preferences/com.bensge.wipi.plist"
+#define CoreFoundationiOS7 847.20
+#define CoreFoundationiOS10 1348.00
 
 static BOOL shouldShowPicker = NO;
 static BOOL longHoldEnabled;
@@ -44,7 +46,7 @@ static void LoadSettings()
 	}
     
     //It does not work well on lock screen on iOS10.
-    if (kCFCoreFoundationVersionNumber >= 1348.00 && [[objc_getClass("SBUserAgent") sharedUserAgent] deviceIsLocked]) return;
+    if (kCFCoreFoundationVersionNumber >= CoreFoundationiOS10 && [[objc_getClass("SBUserAgent") sharedUserAgent] deviceIsLocked]) return;
 
 	if (event)
 	{
@@ -128,7 +130,7 @@ static void LoadSettings()
 - (NSArray *)activator:(LAActivator *)activator requiresCompatibleEventModesForListenerWithName:(NSString *)listenerName
 {
     //It does not work well on lock screen on iOS10.
-    if (kCFCoreFoundationVersionNumber >= 1348.00) {
+    if (kCFCoreFoundationVersionNumber >= CoreFoundationiOS10) {
         return @[@"springboard", @"application"];
     } else {
         return @[@"springboard", @"lockscreen", @"application"];
@@ -224,7 +226,7 @@ static void LoadSettings()
 - (void)scan
 {
 	//Only on 7 and later
-	if (kCFCoreFoundationVersionNumber >= 847.20)
+	if (kCFCoreFoundationVersionNumber >= CoreFoundationiOS7)
 	{
 		[[objc_getClass("WFWiFiManager") sharedInstance] setValue:[NSNumber numberWithInt:-130] forKey:@"_rssiThreshold"];
 	}
@@ -513,7 +515,7 @@ void initFlipSwitch()
                                         NULL,
                                         CFNotificationSuspensionBehaviorDeliverImmediately);
         
-        if (kCFCoreFoundationVersionNumber >= 1348.00)
+        if (kCFCoreFoundationVersionNumber >= CoreFoundationiOS10)
         {
             %init(General10AndLater);
         }
