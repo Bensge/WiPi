@@ -312,7 +312,13 @@ CFStringRef (*_dynamic_WiFiNetworkGetProperty)(void *, CFStringRef) = (CFStringR
 
 		if ([currentNetworkBSSIDs containsObject:networkData[@"BSSID"]] || [networkData[@"isValid"] boolValue])
 		{
-			cell.textLabel.text = [@"✓ " stringByAppendingString:cell.textLabel.text];
+			NSMutableAttributedString *label = [[NSMutableAttributedString alloc] initWithString:[@"✓ " stringByAppendingString:cell.textLabel.text]];
+			if ([UIColor.class respondsToSelector:@selector(systemBlueColor)])
+			{
+				[label addAttribute:NSForegroundColorAttributeName value:UIColor.systemBlueColor range:NSMakeRange(0,1)];
+			}
+			cell.textLabel.attributedText = [[label copy] autorelease];
+			[label release];
 		}
 	}
     

@@ -65,3 +65,7 @@ extern "C" void *WiFiDeviceClientCopyCurrentNetwork(void *);
 + (id)sharedUserAgent;
 - (BOOL)deviceIsLocked;
 @end
+
+@interface UIColor ()
++ (instancetype)systemBlueColor;
+@end
