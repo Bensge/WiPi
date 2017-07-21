@@ -43,7 +43,7 @@ static void loadSettings()
 		CFNotificationCenterAddObserver(CFNotificationCenterGetDarwinNotifyCenter(),
                                         NULL,
                                         (CFNotificationCallback)settingsChangedCallback,
-                                        CFSTR(settingsChangedNotification),
+                                        CFSTR(SETTINGS_CHANGED_NOTIFICATION),
                                         NULL,
                                         CFNotificationSuspensionBehaviorDeliverImmediately);
 		settingsChangedCallback();
