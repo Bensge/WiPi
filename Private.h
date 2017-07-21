@@ -60,3 +60,8 @@
 
 extern "C" NSData *WiFiNetworkGetSSIDData(void *);
 extern "C" void *WiFiDeviceClientCopyCurrentNetwork(void *);
+
+@interface SBUserAgent
++ (id)sharedUserAgent;
+- (BOOL)deviceIsLocked;
+@end
