@@ -1,10 +1,10 @@
-export TARGET = iphone:clang:latest:6.0
+export TARGET = iphone:clang:9.3:6.0
 INSTALL_TARGET_PROCESSES += SpringBoard
 
 #DEBUG=1
 ARCHS = armv7 arm64
 
-include theos/makefiles/common.mk
+include $(THEOS)/makefiles/common.mk
 
 TWEAK_NAME = WiPi
 WiPi_FILES = Tweak.xm
