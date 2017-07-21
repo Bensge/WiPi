@@ -10,7 +10,7 @@
 			<key>label</key>
 			<string>Settings</string>
 			<key>footerText</key>
-			<string>If it is enabled, WiPi will be executed by pressing and holding Wi-Fi on the Control Center or Flipswitch.</string>
+			<string>Activate WiPi by long-pressing WiFi-toggle in Control Center or Flipswitch</string>
 		</dict>
 		<dict>
 			<key>cell</key>
