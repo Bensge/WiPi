@@ -5,13 +5,14 @@
 #import "Private.h"
 
 #define PREF_PATH @"/var/mobile/Library/Preferences/com.bensge.wipi.plist"
+#define SETTINGS_CHANGED_NOTIFICATION "com.bensge.wipi.preferencechanged"
 #define CoreFoundationiOS7 847.20
 #define CoreFoundationiOS10 1348.00
 
 static BOOL shouldShowPicker = NO;
-static BOOL longHoldEnabled;
+static BOOL longHoldEnabled = YES;
 
-static void LoadSettings()
+static void loadSettings()
 {
     NSDictionary *dict = [NSDictionary dictionaryWithContentsOfFile:PREF_PATH];
     
@@ -340,7 +341,7 @@ CFStringRef (*_dynamic_WiFiNetworkGetProperty)(void *, CFStringRef) = (CFStringR
 
 - (BOOL)hasAlternateActionForSwitchIdentifier:(NSString *)identifier
 {
-    LoadSettings();
+    loadSettings();
     
 	if ([identifier isEqualToString:@"com.a3tweaks.switch.wifi"] && longHoldEnabled)
 	{
@@ -351,7 +352,7 @@ CFStringRef (*_dynamic_WiFiNetworkGetProperty)(void *, CFStringRef) = (CFStringR
 
 - (void)applyAlternateActionForSwitchIdentifier:(NSString *)identifier
 {
-    LoadSettings();
+    loadSettings();
     
 	if ([identifier isEqualToString:@"com.a3tweaks.switch.wifi"] && longHoldEnabled)
 	{
@@ -416,7 +417,7 @@ static char wipiHoldGestureRecognizer;
 %new
 - (void)_wipi_longHoldAction:(UILongPressGestureRecognizer *)sender
 {
-    LoadSettings();
+    loadSettings();
     
 	if (sender.state == UIGestureRecognizerStateBegan && longHoldEnabled)
 	{
@@ -510,8 +511,8 @@ void initFlipSwitch()
     @autoreleasepool {
         CFNotificationCenterAddObserver(CFNotificationCenterGetDarwinNotifyCenter(),
                                         NULL,
-                                        (CFNotificationCallback)LoadSettings,
-                                        CFSTR("com.bensge.wipi.preferencechanged"),
+                                        (CFNotificationCallback)loadSettings,
+                                        CFSTR(settingsChangedNotification),
                                         NULL,
                                         CFNotificationSuspensionBehaviorDeliverImmediately);
         
@@ -525,9 +526,9 @@ void initFlipSwitch()
         
         if (objc_getClass("SBControlCenterButton") || objc_getClass("CCUIControlCenterPushButton"))
         {
-            %init(ControlCenter,BUTTONCLASS=(objc_getClass("SBControlCenterButton") ?: objc_getClass("CCUIControlCenterPushButton")));
+            %init(ControlCenter, BUTTONCLASS=(objc_getClass("SBControlCenterButton") ?: objc_getClass("CCUIControlCenterPushButton")));
         }
         
-        LoadSettings();
+        loadSettings();
     }
 }
