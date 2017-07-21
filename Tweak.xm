@@ -16,6 +16,11 @@ static BOOL shouldShowPicker = NO;
 static NSUserDefaults *defaults = nil;
 static BOOL legacyLongHoldEnabled = YES;
 
+/*
+*  -------------
+* | Preferences |
+*  -------------
+*/
 
 static void settingsChangedCallback()
 {
@@ -562,6 +567,12 @@ void initFlipSwitch()
 
 %end
 %end
+
+/*
+*  -------------
+* | Constructor |
+*  -------------
+*/
 
 %ctor
 {
