@@ -12,13 +12,20 @@
 #define CoreFoundationiOS10 1348.00
 
 static BOOL shouldShowPicker = NO;
-static BOOL longHoldEnabled = YES;
+
+static NSUserDefaults *defaults = nil;
 
 static void loadSettings()
 {
-    NSDictionary *dict = [NSDictionary dictionaryWithContentsOfFile:PREF_PATH];
-    
-    longHoldEnabled = [dict objectForKey:@"enabled"] ? [[dict objectForKey:@"enabled"] boolValue] : YES;
+   	defaults = [[NSUserDefaults alloc] initWithSuiteName:@"com.bensge.wipi"];
+    [defaults registerDefaults:@{
+    	@"enabled" : @YES
+    }];
+}
+
+static BOOL isLongHoldEnabled()
+{
+	return [defaults boolForKey:@"enabled"];
 }
 
 /*
@@ -369,9 +376,7 @@ NSArray *dummyTitles = @[
 
 - (BOOL)hasAlternateActionForSwitchIdentifier:(NSString *)identifier
 {
-    loadSettings();
-    
-	if ([identifier isEqualToString:@"com.a3tweaks.switch.wifi"] && longHoldEnabled)
+    if ([identifier isEqualToString:@"com.a3tweaks.switch.wifi"] && isLongHoldEnabled())
 	{
 		return YES;
 	}
@@ -380,9 +385,7 @@ NSArray *dummyTitles = @[
 
 - (void)applyAlternateActionForSwitchIdentifier:(NSString *)identifier
 {
-    loadSettings();
-    
-	if ([identifier isEqualToString:@"com.a3tweaks.switch.wifi"] && longHoldEnabled)
+    if ([identifier isEqualToString:@"com.a3tweaks.switch.wifi"] && isLongHoldEnabled())
 	{
 		[[LAActivator sharedInstance] sendEvent:nil toListenerWithName:@"com.bensge.wipi"];
 	}
@@ -445,9 +448,7 @@ static char wipiHoldGestureRecognizer;
 %new
 - (void)_wipi_longHoldAction:(UILongPressGestureRecognizer *)sender
 {
-    loadSettings();
-    
-	if (sender.state == UIGestureRecognizerStateBegan && longHoldEnabled)
+    if (sender.state == UIGestureRecognizerStateBegan && isLongHoldEnabled())
 	{
 		[[LAActivator sharedInstance] sendEvent:nil toListenerWithName:@"com.bensge.wipi"];
 	}
@@ -536,14 +537,8 @@ void initFlipSwitch()
 
 %ctor
 {
-    @autoreleasepool {
-        CFNotificationCenterAddObserver(CFNotificationCenterGetDarwinNotifyCenter(),
-                                        NULL,
-                                        (CFNotificationCallback)loadSettings,
-                                        CFSTR(settingsChangedNotification),
-                                        NULL,
-                                        CFNotificationSuspensionBehaviorDeliverImmediately);
-        
+    @autoreleasepool
+    {	
         if (kCFCoreFoundationVersionNumber >= CoreFoundationiOS10)
         {
             %init(General10AndLater);
