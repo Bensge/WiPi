@@ -32,7 +32,7 @@
 			<key>label</key>
 			<string>Activator</string>
 			<key>footerText</key>
-			<string>Please select the method to be executed by Activator.</string>
+			<string>Please select the method to activate WiPi via Activator.</string>
 		</dict>
 		<dict>
 			<key>cell</key>
@@ -50,7 +50,7 @@
 			<key>cell</key>
 			<string>PSGroupCell</string>
 			<key>footerText</key>
-			<string>© 2013 - 2017 Bensge @ Apextweaks</string>
+			<string>© 2013 - 2017 Bensge and contributors</string>
 		</dict>
 	</array>
 	<key>title</key>
