@@ -21,7 +21,7 @@ static BOOL shouldShowPicker = NO;
 @end 
 
 @interface WFWiFiManager (Additions)
-- (NSString *)currentNetworkBSSID;
+- (NSSet<NSString *> *)currentNetworkBSSIDs;
 @end
 
 @implementation WiPiListener
@@ -193,7 +193,7 @@ CFDictionaryRef (*_dynamic_WiFiNetworkCopyRecord)(void *) = (CFDictionaryRef (*)
 CFStringRef (*_dynamic_WiFiNetworkGetProperty)(void *, CFStringRef) = (CFStringRef (*) (void *, CFStringRef))(dlsym(RTLD_DEFAULT, "WiFiNetworkGetProperty"));
 
 %new
-- (NSString *)currentNetworkBSSID
+- (NSArray<NSString *> *)currentNetworkBSSIDs
 {
 	//Doesn't work with key value coding, c struct pointers not supported
 	//void *device = [self valueForKey:@"_device"];
@@ -203,9 +203,52 @@ CFStringRef (*_dynamic_WiFiNetworkGetProperty)(void *, CFStringRef) = (CFStringR
 		void *currentNetwork = _dynamic_WiFiDeviceClientCopyCurrentNetwork(device);
 		if (currentNetwork != NULL)
 		{
-			//NSDictionary *properties = (NSDictionary *)_dynamic_WiFiNetworkCopyRecord(currentNetwork);
-			NSString *data = (NSString *)_dynamic_WiFiNetworkGetProperty(currentNetwork, CFSTR("BSSID"));
-			return data;
+			NSDictionary *properties = (NSDictionary *)_dynamic_WiFiNetworkCopyRecord(currentNetwork);
+			// The properties dictionary is of the following form:
+			/*
+			{
+				"AP_MODE" = 2;
+			    "ASSOC_FLAGS" = 1;
+			    "BEACON_INT" = 20;
+			    BSSID = "55:65:51:57:25:55";
+			    CAPABILITIES = 1329;
+			    CHANNEL = 44;
+				networkKnownBSSListKey = (
+		            {
+			            BSSID = "55:65:51:57:25:55";
+			            CHANNEL = 6;
+			            "CHANNEL_FLAGS" = 10;
+			            lastRoamed = "2017-07-20 13:57:31 +0000";
+			        },
+		            {
+			            BSSID = "11:11:11:11:11:11";
+			            CHANNEL = 44;
+			            "CHANNEL_FLAGS" = 1040;
+			            lastRoamed = "2017-07-20 14:01:11 +0000";
+			        }
+			    );
+			}
+		    */
+			//NSString *data = (NSString *)_dynamic_WiFiNetworkGetProperty(currentNetwork, CFSTR("BSSID"));
+			NSString *bssid = properties[@"BSSID"];
+
+			NSMutableSet<NSString *> *bssidSet = [NSMutableSet setWithObject:bssid];
+
+			NSObject *knownBSSIDsList = properties[@"networkKnownBSSListKey"];
+			if (knownBSSIDsList && [knownBSSIDsList isKindOfClass:NSArray.class])
+			{
+				for (NSObject *bssidInfo in (NSArray *)knownBSSIDsList)
+				{
+					if ([bssidInfo isKindOfClass:NSDictionary.class])
+					{
+						NSObject *knownBSSID = ((NSDictionary *)bssidInfo)[@"BSSID"];
+						if ([knownBSSID isKindOfClass:NSString.class]) {
+							[bssidSet addObject:(NSString *)knownBSSID];
+						}
+					}
+				}
+			}
+			return [[bssidSet copy] autorelease];
 		}
 	}
 	return NULL;
@@ -222,9 +265,9 @@ CFStringRef (*_dynamic_WiFiNetworkGetProperty)(void *, CFStringRef) = (CFStringR
 	{
 		NSDictionary *networkData = [cell valueForKey:@"_dict"];
 
-		NSString *currentNetworkBSSID = (NSString *)[[objc_getClass("WFWiFiManager") sharedInstance] currentNetworkBSSID];
+		NSSet<NSString *> *currentNetworkBSSIDs = [[objc_getClass("WFWiFiManager") sharedInstance] currentNetworkBSSIDs];
 
-		if ([networkData[@"BSSID"] isEqualToString:currentNetworkBSSID])
+		if ([currentNetworkBSSIDs containsObject:networkData[@"BSSID"]] || [networkData[@"isValid"] boolValue])
 		{
 			cell.textLabel.text = [@"✔︎ " stringByAppendingString:cell.textLabel.text];
 		}
