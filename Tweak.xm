@@ -6,6 +6,8 @@
 
 #define PREF_PATH @"/var/mobile/Library/Preferences/com.bensge.wipi.plist"
 #define SETTINGS_CHANGED_NOTIFICATION "com.bensge.wipi.preferencechanged"
+#define DUMMY_TITLES 0
+
 #define CoreFoundationiOS7 847.20
 #define CoreFoundationiOS10 1348.00
 
@@ -305,6 +307,18 @@ CFStringRef (*_dynamic_WiFiNetworkGetProperty)(void *, CFStringRef) = (CFStringR
 
 %hook WFWiFiAlertItem
 
+// Useful for taking screenshots
+#if DUMMY_TITLES
+NSArray *dummyTitles = @[
+	@"My WiFi network",
+	@"Corporate network",
+	@"Family network",
+	@"Dog WiFi",
+	@"Restaurant",
+	@"Public WiFi"
+];
+#endif
+
 - (UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)idx
 {
 	UITableViewCell *cell = %orig();
@@ -316,7 +330,13 @@ CFStringRef (*_dynamic_WiFiNetworkGetProperty)(void *, CFStringRef) = (CFStringR
 
 		if ([currentNetworkBSSIDs containsObject:networkData[@"BSSID"]] || [networkData[@"isValid"] boolValue])
 		{
-			NSMutableAttributedString *label = [[NSMutableAttributedString alloc] initWithString:[@"✓ " stringByAppendingString:cell.textLabel.text]];
+#if DUMMY_TITLES		
+			NSString *originalText = idx.row < dummyTitles.count ? dummyTitles[idx.row] : cell.textLabel.text;
+#else
+			NSString *originalText = cell.textLabel.text;
+#endif
+
+			NSMutableAttributedString *label = [[NSMutableAttributedString alloc] initWithString:[@"✓ " stringByAppendingString:originalText]];
 			if ([UIColor.class respondsToSelector:@selector(systemBlueColor)])
 			{
 				[label addAttribute:NSForegroundColorAttributeName value:UIColor.systemBlueColor range:NSMakeRange(0,1)];
@@ -324,6 +344,14 @@ CFStringRef (*_dynamic_WiFiNetworkGetProperty)(void *, CFStringRef) = (CFStringR
 			cell.textLabel.attributedText = [[label copy] autorelease];
 			[label release];
 		}
+
+#if DUMMY_TITLES
+		else if (idx.row < dummyTitles.count)
+		{
+			cell.textLabel.text = dummyTitles[idx.row];
+		}
+#endif
+
 	}
     
     return cell;
