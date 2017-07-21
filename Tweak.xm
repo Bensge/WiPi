@@ -14,18 +14,46 @@
 static BOOL shouldShowPicker = NO;
 
 static NSUserDefaults *defaults = nil;
+static BOOL legacyLongHoldEnabled = YES;
+
+
+static void settingsChangedCallback()
+{
+	NSDictionary *dict = [NSDictionary dictionaryWithContentsOfFile:PREF_PATH];
+    
+    legacyLongHoldEnabled = [dict objectForKey:@"enabled"] ? [[dict objectForKey:@"enabled"] boolValue] : YES;
+}
 
 static void loadSettings()
 {
-   	defaults = [[NSUserDefaults alloc] initWithSuiteName:@"com.bensge.wipi"];
-    [defaults registerDefaults:@{
-    	@"enabled" : @YES
-    }];
+	if (kCFCoreFoundationVersionNumber >= CoreFoundationiOS7)
+	{
+	   	defaults = [[NSUserDefaults alloc] initWithSuiteName:@"com.bensge.wipi"];
+	    [defaults registerDefaults:@{
+	    	@"enabled" : @YES
+	    }];
+	}
+	else
+	{
+		CFNotificationCenterAddObserver(CFNotificationCenterGetDarwinNotifyCenter(),
+                                        NULL,
+                                        (CFNotificationCallback)settingsChangedCallback,
+                                        CFSTR(settingsChangedNotification),
+                                        NULL,
+                                        CFNotificationSuspensionBehaviorDeliverImmediately);
+		settingsChangedCallback();
+	}
 }
 
 static BOOL isLongHoldEnabled()
 {
-	return [defaults boolForKey:@"enabled"];
+	if (kCFCoreFoundationVersionNumber >= CoreFoundationiOS7)
+	{
+		return [defaults boolForKey:@"enabled"];
+	}
+	else {
+		return legacyLongHoldEnabled;
+	}
 }
 
 /*
