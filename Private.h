@@ -69,3 +69,7 @@ extern "C" void *WiFiDeviceClientCopyCurrentNetwork(void *);
 @interface UIColor ()
 + (instancetype)systemBlueColor;
 @end
+
+@interface UIImage ()
++ (instancetype)imageNamed:(NSString *)name inBundle:(NSBundle *)bundle;
+@end

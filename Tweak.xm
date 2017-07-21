@@ -113,15 +113,16 @@ static void LoadSettings()
     return @"Show WiFi Picker";
 }
 
-- (NSData *)activator:(LAActivator *)activator requiresSmallIconDataForListenerName:(NSString *)listenerName scale:(CGFloat *)scale
+- (UIImage *)activator:(LAActivator *)activator requiresSmallIconForListenerName:(NSString *)listenerName scale:(CGFloat)scale
 {
-    if (*scale == 1.0) {
-        return [NSData dataWithContentsOfFile:@"/Library/PreferenceBundles/WiPiSettings.bundle/WiPi.png"];
-    } else if (*scale == 2.0){
-        return [NSData dataWithContentsOfFile:@"/Library/PreferenceBundles/WiPiSettings.bundle/WiPi@2x.png"];
-    } else {
-        return [NSData dataWithContentsOfFile:@"/Library/PreferenceBundles/WiPiSettings.bundle/WiPi@3x.png"];
-    }
+	__block NSBundle *preferenceBundle = nil;
+	static dispatch_once_t once;
+    dispatch_once(&once, ^{
+		preferenceBundle = [NSBundle bundleWithPath:@"/Library/PreferenceBundles/WiPiSettings.bundle/"];
+	});
+
+	UIImage *icon = [UIImage imageNamed:@"WiPi" inBundle:preferenceBundle];
+	return icon;
 }
 
 - (NSArray *)activator:(LAActivator *)activator requiresCompatibleEventModesForListenerWithName:(NSString *)listenerName
