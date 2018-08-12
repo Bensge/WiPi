@@ -73,3 +73,7 @@ extern "C" void *WiFiDeviceClientCopyCurrentNetwork(void *);
 @interface UIImage ()
 + (instancetype)imageNamed:(NSString *)name inBundle:(NSBundle *)bundle;
 @end
+
+@interface WPScanRequest : NSObject
+- (void)setRssiThreshold:(NSNumber *)arg1;
+@end

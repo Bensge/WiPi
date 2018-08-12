@@ -1,7 +1,7 @@
 Package: com.bensge.wipi
 Name: WiPi
 Depends: firmware (>= 6.0), libactivator, mobilesubstrate, preferenceloader
-Version: 1.5.1
+Version: 1.5.2
 Architecture: iphoneos-arm
 Description: Activate system WiFi Picker with an Activator gesture, or by long-pressing the Control Center or FlipSwitch WiFi toggle. Automatically enables Wi-Fi if not enabled.
 Maintainer: bensge
