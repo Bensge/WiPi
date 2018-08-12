@@ -10,6 +10,7 @@
 
 #define CoreFoundationiOS7 847.20
 #define CoreFoundationiOS10 1348.00
+#define CoreFoundationiOS11 1443.00
 
 static BOOL shouldShowPicker = NO;
 
@@ -88,8 +89,8 @@ static BOOL isLongHoldEnabled()
 		return;
 	}
     
-    //It does not work well on lock screen on iOS10.
-    if (kCFCoreFoundationVersionNumber >= CoreFoundationiOS10 && [[objc_getClass("SBUserAgent") sharedUserAgent] deviceIsLocked]) return;
+    //It does not work well on lock screen on iOS10 and iOS 11.
+    if (((kCFCoreFoundationVersionNumber >= CoreFoundationiOS10 && kCFCoreFoundationVersionNumber < CoreFoundationiOS11) && [[objc_getClass("SBUserAgent") sharedUserAgent] deviceIsLocked]) || (kCFCoreFoundationVersionNumber >= CoreFoundationiOS11 && [[objc_getClass("SBUserAgent") alloc] deviceIsLocked])) return;
 
 	if (event)
 	{
@@ -269,10 +270,13 @@ static BOOL isLongHoldEnabled()
 - (void)scan
 {
 	//Only on 7 and later
-	if (kCFCoreFoundationVersionNumber >= CoreFoundationiOS7)
+	if (kCFCoreFoundationVersionNumber >= CoreFoundationiOS7 && kCFCoreFoundationVersionNumber < CoreFoundationiOS11)
 	{
 		[[objc_getClass("WFWiFiManager") sharedInstance] setValue:[NSNumber numberWithInt:-130] forKey:@"_rssiThreshold"];
-	}
+    }
+    else if (kCFCoreFoundationVersionNumber >= CoreFoundationiOS11) {
+        [[objc_getClass("WPScanRequest") alloc] setRssiThreshold:[NSNumber numberWithInt:-130]];
+    }
 	%orig;
 }
 
@@ -490,6 +494,58 @@ static char wipiHoldGestureRecognizer;
 %end
 %end
 
+@interface CCUIConnectivityWifiViewController : UIViewController
+@property (nonatomic, retain) UILongPressGestureRecognizer *longPressRecognizer;
+@property (nonatomic, retain) UIButton *button;
+- (void)_wipi_longHoldAction;
+@end
+
+%group ControlCenter11
+%hook CCUIConnectivityWifiViewController
+%property (nonatomic, retain) UILongPressGestureRecognizer *longPressRecognizer;
+
+%new
+- (void)longPressRecognized:(UILongPressGestureRecognizer *)sender {
+    if (sender.state == UIGestureRecognizerStateBegan) {
+        if ([self valueForKey:@"_parentViewController"]) {
+            if ([[self valueForKey:@"_parentViewController"] valueForKey:@"_expanded"]) {
+                if ([[[self valueForKey:@"_parentViewController"] valueForKey:@"_expanded"] boolValue] == YES) {
+                    [self _wipi_longHoldAction];
+                }
+            }
+        }
+    }
+}
+
+- (id)init {
+    CCUIConnectivityWifiViewController *controller = %orig;
+    if (controller) {
+        controller.longPressRecognizer = [[UILongPressGestureRecognizer alloc] initWithTarget:self action:@selector(longPressRecognized:)];
+        controller.longPressRecognizer.minimumPressDuration = 0.9;
+    }
+    return controller;
+    
+}
+
+- (void)viewDidLoad {
+    %orig;
+    if (self.longPressRecognizer && self.button) {
+        [self.button addGestureRecognizer:self.longPressRecognizer];
+    }
+}
+
+%new
+- (void)_wipi_longHoldAction
+{
+    if (isLongHoldEnabled())
+    {
+        [[LAActivator sharedInstance] sendEvent:nil toListenerWithName:@"com.bensge.wipi"];
+    }
+}
+
+%end
+%end
+
 /*
 * Hook setup code
 */
@@ -568,6 +624,16 @@ void initFlipSwitch()
 %end
 %end
 
+static BOOL didHook = NO;
+static void notificationCallback(CFNotificationCenterRef center, void *observer, CFStringRef name, const void *object, CFDictionaryRef userInfo) {
+    if ([((__bridge NSDictionary *)userInfo)[NSLoadedClasses] containsObject:@"CCUIConnectivityAirDropViewController"]) { // The Network Bundle is Loaded
+        if (!didHook) {
+            didHook = YES;
+            %init(ControlCenter11);
+        }
+    }
+}
+
 /*
 *  -------------
 * | Constructor |
@@ -589,6 +655,28 @@ void initFlipSwitch()
         if (objc_getClass("SBControlCenterButton") || objc_getClass("CCUIControlCenterPushButton"))
         {
             %init(ControlCenter, BUTTONCLASS=(objc_getClass("SBControlCenterButton") ?: objc_getClass("CCUIControlCenterPushButton")));
+        }
+        
+        BOOL shouldInit = NO;
+        if (!NSClassFromString(@"APTableCell")) {
+            NSString *fullPath = [NSString stringWithFormat:@"/System/Library/PreferenceBundles/AirPortSettings.bundle"];
+            NSBundle *bundle;
+            bundle = [NSBundle bundleWithPath:fullPath];
+            BOOL didLoad = [bundle load];
+            if (didLoad) {
+                shouldInit = YES;
+            }
+        } else {
+            shouldInit = YES;
+        }
+        
+        if (shouldInit && kCFCoreFoundationVersionNumber >= CoreFoundationiOS11)
+        {
+            CFNotificationCenterAddObserver(
+                                            CFNotificationCenterGetLocalCenter(), NULL,
+                                            notificationCallback,
+                                            (CFStringRef)NSBundleDidLoadNotification,
+                                            NULL, CFNotificationSuspensionBehaviorCoalesce);
         }
         
         loadSettings();
